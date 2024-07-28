@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+
+    environment {
+        GIT_REPO = 'https://your-git-repo-url.git'
+        BRANCH = 'main'
+        APP_NAME = 'your-app-name'
+        TOMCAT_USER = 'tomcat-user'
+        TOMCAT_PASSWORD = 'tomcat-password'
+        TOMCAT_URL = 'http://your-tomcat-server:8080/manager/text'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: "${env.BRANCH}", url: "${env.GIT_REPO}"
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                script {
+                    def warFile = "target/${env.APP_NAME}.war"
+                    def deployUrl = "${env.TOMCAT_URL}/deploy?path=/your-app-path&update=true"
+                    
+                    sh """
+                    curl --upload-file ${warFile} --user ${env.TOMCAT_USER}:${env.TOMCAT_PASSWORD} ${deployUrl}
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Deployment succeeded!'
+        }
+        failure {
+            echo 'Deployment failed!'
+        }
+    }
+}
